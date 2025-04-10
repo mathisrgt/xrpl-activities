@@ -9,4 +9,5 @@ export interface Activity {
     grades: { username: string, grade: number }[];
     status: { username: string, status: "NoStarted" | "InProgress" | "Done" }[];
     classrooms: Classroom[];
+    metaData: any
 }

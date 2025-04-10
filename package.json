@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "npm start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,6 +15,7 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "chalk": "^5.4.1",
     "xrpl": "^4.2.0"
   }
 }
