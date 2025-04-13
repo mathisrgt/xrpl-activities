@@ -103,7 +103,7 @@ export async function watchMemoActivities() {
 
                 const studentWalletData = memoActivity.wallets.find((wallet) => wallet.username === solutionAccountData.username);
                 // console.log("student wallet data: ", studentWalletData);
-
+                
                 if (studentWalletData && studentWalletData.seed) {
                     try {
                         const transactions = await client.request({
@@ -174,6 +174,6 @@ export async function watchMemoActivities() {
             }
         }
         console.log(chalk.grey('No tx found...'));
-        await delayInSec(5, true);
+        await delayInSec(5);
     }
 }
