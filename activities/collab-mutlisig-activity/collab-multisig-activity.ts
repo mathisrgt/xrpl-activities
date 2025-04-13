@@ -1,4 +1,4 @@
-import { Client, Wallet, xrpToDrops, convertStringToHex, SignerListSet, Transaction, multisign } from 'xrpl';
+import { Client, Wallet, xrpToDrops, convertStringToHex, SignerListSet, Transaction, multisign, AccountSet } from 'xrpl';
 import chalk from 'chalk';
 import { Activity } from '../activity';
 import { User } from '../../students';
@@ -36,6 +36,11 @@ export async function generateCollabMultisigActivity(activityName: string, activ
     await client.connect();
 
 
+    collabMultisigActivity.metaData.groups.push({
+        students: [],
+        solutionAccount: undefined
+    });
+
     // Step 1: Generate a wallet for each student
     for (const student of students) {
         console.log(chalk.blue(`\nStudent "${student.username}"`));
@@ -52,12 +57,9 @@ export async function generateCollabMultisigActivity(activityName: string, activ
         // TODO: Can be deleted, already stored in wallets 
         //  - find a deterministic way to create groups
         //  - handle students activity management
-        collabMultisigActivity.metaData.groups.push({
-            students: [{
-                username: student.username,
-                classicAddress: studentWallet.classicAddress
-            }],
-            solutionAccount: undefined
+        collabMultisigActivity.metaData.groups[0].students.push({
+            username: student.username,
+            classicAddress: studentWallet.classicAddress
         });
         console.log(chalk.blue(`💵 New student wallet: ${studentWallet.classicAddress}`));
     }
@@ -89,6 +91,7 @@ export async function generateCollabMultisigActivity(activityName: string, activ
         console.log(`\nYour team: \n${chalk.grey("- " + student0address)}\n ${chalk.yellow("- " + student1address)}\n ${chalk.yellow("- " + student2address)}`);
         console.log(`\nMultisig account: ${chalk.red(multisigAccount.address)}`);
 
+        // SIGNERS LIST SETUP
         const signerListTx: SignerListSet = {
             TransactionType: "SignerListSet",
             Account: multisigAccount.classicAddress,
@@ -98,10 +101,10 @@ export async function generateCollabMultisigActivity(activityName: string, activ
                 { SignerEntry: { Account: student1address, SignerWeight: 1 } },
                 { SignerEntry: { Account: student2address, SignerWeight: 1 } },
             ],
-            Fee: "30000",
+            Fee: "3000",
         }
 
-        console.dir(signerListTx, { depth: null });
+        // console.dir(signerListTx, { depth: null });
 
         const result = await client.submitAndWait(signerListTx, { wallet: multisigAccount })
         console.log(`📝 Signer list set. Tx hash: ${result.result.hash}`)
@@ -112,7 +115,8 @@ export async function generateCollabMultisigActivity(activityName: string, activ
             TransactionType: 'Payment',
             Account: multisigAccount.classicAddress,
             Destination: solutionAccount.classicAddress,
-            Amount: xrpToDrops('10')
+            Amount: xrpToDrops('1'),
+            Fee: "3000"
         })
 
         delayInSec(10);
@@ -122,8 +126,6 @@ export async function generateCollabMultisigActivity(activityName: string, activ
 
         const student1seed = collabMultisigActivity.wallets[1].seed;
         const student2seed = collabMultisigActivity.wallets[2].seed;
-
-
 
         if (student1seed && student2seed) {
             const student0Wallet = Wallet.fromSeed(student0seed);
@@ -158,7 +160,7 @@ export async function generateCollabMultisigActivity(activityName: string, activ
             const multisignedTx = multisign([tx_blob0, tx_blob1, tx_blob2])
             const submitResult = await client.submit(multisignedTx);
             console.log('Multisig tx submitted: ', submitResult.result.engine_result);
-            if(submitResult.status === 'success') {
+            if (submitResult.status === 'success') {
                 console.log(`✅ Multisigned payment sent!`);
             }
         } else {
@@ -180,52 +182,59 @@ export async function watchCollabMultisigActivities() {
 
     while (true) {
         for (const collabMultisigActivity of collabMultisigActivities) {
-            for (const solutionAccountData of collabMultisigActivity.metaData.solutionAccounts) {
-                // TODO watcher
-                // try {
-                //     const transactions = await client.request({
-                //         command: "account_tx",
-                //         account: solutionAccountData.classicAddress,
-                //         ledger_index_min: -1,
-                //         ledger_index_max: -1,
-                //         binary: false,
-                //         limit: 5,
-                //         forward: false,
-                //     });
+            for (let i = 0; i < collabMultisigActivity.metaData.groups.length; i++) {
+                if (collabMultisigActivity.metaData.groups[i].solutionAccount) {
+                    try {
+                        const transactions = await client.request({
+                            command: "account_tx",
+                            account: collabMultisigActivity.metaData.groups[i].solutionAccount.classicAddress,
+                            ledger_index_min: -1,
+                            ledger_index_max: -1,
+                            binary: false,
+                            limit: 5,
+                            forward: false,
+                        });
 
-                //     const txs = transactions.result.transactions;
+                        const txs = transactions.result.transactions;
 
-                //     if (txs && txs.length > 0) {
-                //         const found = txs.find(tx => {
-                //             return (
-                //                 tx.tx_json?.TransactionType === "Payment" &&
-                //                 tx.tx_json.Account === studentWalletData.classicAddress &&
-                //                 tx.tx_json.Destination === solutionAccountData.classicAddress
-                //             );
-                //         });
+                        if (txs && txs.length > 0) {
+                            const found = txs.find(tx => {
+                                return (
+                                    tx.tx_json?.TransactionType === "Payment" &&
+                                    tx.tx_json.Signers &&
+                                    tx.tx_json.Signers?.length === 3 &&
+                                    tx.tx_json.Destination === collabMultisigActivity.metaData.groups[i].solutionAccount.classicAddress
+                                );
+                            });
 
-                //         if (found) {
-                //             console.log(chalk.green(`✅ Found incoming payment to solution account for student "${solutionAccountData.username}"`));
+                            if (found) {
+                                console.log(chalk.green(`✅ Found incoming payment to solution account for group "${collabMultisigActivity.metaData.groups[i].solutionAccount.username}"`));
 
-                //             const studentStatus = memoActivity.status.find(s => s.username === solutionAccountData.username);
-                //             if (!studentStatus) {
-                //                 memoActivity.status.push({
-                //                     username: solutionAccountData.username,
-                //                     status: "Done",
-                //                     txHash: found.tx ? found.hash : undefined
-                //                 });
-                //             } else {
-                //                 studentStatus.status = "Done";
-                //                 studentStatus.txHash = found.hash;
-                //             }
+                                // TODO
+                                for (const student of collabMultisigActivity.metaData.groups[i].students) {
+                                    const studentStatus = collabMultisigActivity.status.find(status => status.username === student.username);
+                                    if (!studentStatus) {
+                                        collabMultisigActivity.status.push({
+                                            username: student.username,
+                                            status: "Done",
+                                            txHash: found.tx ? found.hash : undefined
+                                        });
+                                    } else {
+                                        studentStatus.status = "Done";
+                                        studentStatus.txHash = found.hash;
+                                    }
+                                }
 
-                //             await client.disconnect();
-                //             return;
-                //         }
-                //     }
-                // } catch (error) {
-                //     console.error(chalk.red(`❌ Error checking transactions for ${solutionAccountData.username}`), error);
-                // }
+                                await client.disconnect();
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error(chalk.red(`❌ Error checking transactions for group ${i}`), error);
+                    }
+                } else {
+                    console.log(chalk.grey('No solution account found for group ', i));
+                }
             }
         }
         console.log(chalk.grey('No tx found...'));

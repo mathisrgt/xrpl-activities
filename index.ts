@@ -2,7 +2,7 @@ import readline from 'readline';
 import { students } from './activities/data';
 import { generateMemoActivity, watchMemoActivities } from './activities/memo-activity/memo-activity';
 import chalk from 'chalk';
-import { generateCollabMultisigActivity } from './activities/collab-mutlisig-activity/collab-multisig-activity';
+import { generateCollabMultisigActivity, watchCollabMultisigActivities } from './activities/collab-mutlisig-activity/collab-multisig-activity';
 
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
@@ -39,8 +39,8 @@ async function main() {
         await watchMemoActivities();
     }
     else if (choice === '2') {
-        // console.log(chalk.green('\n📡 Watching for collab multisig activity responses...'));
-        // watchCollabMultisigActivities();
+        console.log(chalk.green('\n📡 Watching for collab multisig activity responses...'));
+        watchCollabMultisigActivities();
 
         console.log(chalk.yellow('\n🛠️  Generating collab multisig activity...'));
         await generateCollabMultisigActivity(
