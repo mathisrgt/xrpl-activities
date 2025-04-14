@@ -1,6 +1,7 @@
 # Collab memo activity generation:
 
-# find something to do with consensus logic
+# find something to do with consensus logic - async
+# or contest bet students, only 1 fo 3 get the points for this exercise -- require liveness // TBD
 
 Generate and fund the students wallets
 

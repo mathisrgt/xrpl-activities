@@ -3,6 +3,7 @@ import { students } from './activities/data';
 import { generateMemoActivity, watchMemoActivities } from './activities/memo-activity/memo-activity';
 import chalk from 'chalk';
 import { generateCollabMultisigActivity, watchCollabMultisigActivities } from './activities/collab-mutlisig-activity/collab-multisig-activity';
+import { generateTracingActivity, watchTracingActivities } from './activities/tracing-activity/tracing-activity';
 
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
@@ -22,6 +23,7 @@ async function main() {
     console.log(chalk.blueBright(`🎓 Choose an activity:`));
     console.log(` 1 - Memo`);
     console.log(` 2 - Collab - MultiSig`);
+    console.log(` 3 - Tracing`);
     console.log(` 0 - Exit\n`);
 
     const choice = await promptUser('Enter your choice: ');
@@ -48,9 +50,22 @@ async function main() {
             "Technical workshop for business students from IE Madrid",
             students
         );
-    } else {
+    }
+    else if (choice === '3') {
+        console.log(chalk.yellow('\n🛠️  Generating tracing activity...'));
+        await generateTracingActivity(
+            "IE Madrid - Workshop Tech.",
+            "Technical workshop for business students from IE Madrid",
+            students
+        );
+
+        console.log(chalk.green('\n📡 Watching for tracing activity responses...'));
+        await watchTracingActivities();
+    } else if (choice === '0') {
         console.log(chalk.grey('\n👋 Exiting...'));
         process.exit(0);
+    } else {
+        console.log(chalk.red('\nUnknow input. Try again...'));
     }
 }
 

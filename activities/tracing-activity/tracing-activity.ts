@@ -4,18 +4,18 @@ import { Activity } from '../activity';
 import { User } from '../../students';
 import { delayInSec } from '../../utils';
 
-const memoActivities: Activity[] = [];
+const tracingActivities: Activity[] = [];
 
 // Generate the activity for the students in parameters
 /**
  * @param {User[]} students - The students involved in the memo activity.
  * @returns {Activity} The memo activity generated.
  */
-export async function generateMemoActivity(activityName: string, activityDescription: string, students: User[]): Promise<Activity> {
-    console.log(chalk.bgWhite('SERVICE - GENERATE MEMO ACTIVTIY'));
+export async function generateTracingActivity(activityName: string, activityDescription: string, students: User[]): Promise<Activity> {
+    console.log(chalk.bgWhite('SERVICE - GENERATE TRACING ACTIVTIY'));
 
-    const memoActivity: Activity = {
-        id: "memoActivity" + memoActivities.length,
+    const tracingActivity: Activity = {
+        id: "tracingActivity" + tracingActivities.length,
         name: activityName,
         description: activityDescription,
         content: "",
@@ -27,19 +27,16 @@ export async function generateMemoActivity(activityName: string, activityDescrip
             solutionAccounts: []
         }
     };
-    console.log(chalk.green('🧱 New memo activity created: ', memoActivity.id));
+    console.log(chalk.green('🧱 New tracing activity created: ', tracingActivity.id));
 
     const client = new Client("wss://s.devnet.rippletest.net:51233/");
     await client.connect();
-
-    const { wallet: senderWallet } = await client.fundWallet();
-    console.log(chalk.yellow('💵 New sender wallet created: ', senderWallet.classicAddress));
 
     for (const student of students) {
         console.log(chalk.blue(`\nStudent "${student.username}"`));
 
         const { wallet: studentWallet } = await client.fundWallet();
-        memoActivity.wallets.push({
+        tracingActivity.wallets.push({
             username: student.username,
             pubKey: studentWallet.publicKey,
             prvKey: studentWallet.privateKey,
@@ -48,8 +45,30 @@ export async function generateMemoActivity(activityName: string, activityDescrip
         });
         console.log(chalk.blue(`💵 New student wallet: ${studentWallet.classicAddress}`));
 
+        for(let i = 0; i < 4; i++) {
+            const { wallet: randomWallet } = await client.fundWallet();
+            const randomXRPamount = (Math.floor(Math.random() * 11) + 1).toString();
+
+            const transaction = await client.autofill({
+                TransactionType: "Payment",
+                Account: studentWallet.address,
+                Amount: xrpToDrops(randomXRPamount),
+                Destination: randomWallet.address
+            });
+
+            try {
+                const result = await client.submitAndWait(transaction, { wallet: studentWallet });
+                if (result.result.validated)
+                    console.log(`✅ Random tx successful for student "${student.username}":`, result.result.hash);
+                else
+                    console.error(`❌ Failed to send a random tx for student "${student.username}":`, result.result.meta?.toString());
+            } catch (error) {
+                console.error(`❌ Failed to send a random tx for student ${student.email}:`, error);
+            }
+        }
+
         const { wallet: solutionAccount } = await client.fundWallet();
-        memoActivity.metaData.solutionAccounts.push({
+        tracingActivity.metaData.solutionAccounts.push({
             username: student.username,
             pubKey: solutionAccount.publicKey,
             prvKey: solutionAccount.privateKey,
@@ -57,27 +76,15 @@ export async function generateMemoActivity(activityName: string, activityDescrip
         });
         console.log(chalk.blue(`💵 New solution account: ${solutionAccount.classicAddress}`));
 
-        const memo = `Send a transaction to your solution account: ${solutionAccount.classicAddress}`;
-        console.log(chalk.grey('📝 Memo about to be send: ', memo));
-        const memoHex = convertStringToHex(memo);
-
-        // Define the payment transaction details
         const transaction = await client.autofill({
             TransactionType: "Payment",
-            Account: senderWallet.address,
-            Amount: xrpToDrops("1"), // Base (minimum amount to activate the account)
-            Destination: studentWallet.classicAddress,
-            Memos: [
-                {
-                    Memo: {
-                        MemoData: memoHex
-                    }
-                }
-            ]
+            Account: studentWallet.classicAddress,
+            Amount: xrpToDrops("12"),
+            Destination: solutionAccount.address
         });
 
         try {
-            const result = await client.submitAndWait(transaction, { wallet: senderWallet });
+            const result = await client.submitAndWait(transaction, { wallet: studentWallet });
             if (result.result.validated)
                 console.log(`✅ Transaction successful for student "${student.username}":`, result.result.hash);
             else
@@ -85,23 +92,47 @@ export async function generateMemoActivity(activityName: string, activityDescrip
         } catch (error) {
             console.error(`❌ Failed to send transaction for student ${student.email}:`, error);
         }
+
+        for(let i = 0; i < 4; i++) {
+            const { wallet: randomWallet } = await client.fundWallet();
+            const randomXRPamount = (Math.floor(Math.random() * 11) + 1).toString();
+
+            const transaction = await client.autofill({
+                TransactionType: "Payment",
+                Account: studentWallet.address,
+                Amount: xrpToDrops(randomXRPamount),
+                Destination: randomWallet.address
+            });
+
+            try {
+                const result = await client.submitAndWait(transaction, { wallet: studentWallet });
+                if (result.result.validated)
+                    console.log(`✅ Random tx successful for student "${student.username}":`, result.result.hash);
+                else
+                    console.error(`❌ Failed to send a random tx for student "${student.username}":`, result.result.meta?.toString());
+            } catch (error) {
+                console.error(`❌ Failed to send a random tx for student ${student.email}:`, error);
+            }
+        }
     }
+
+    console.log(chalk.bgCyan("Send a payment to the address that received the biggest XRP amount in your transaction history."));
 
     await client.disconnect();
 
-    memoActivities.push(memoActivity);
-    return memoActivity;
+    tracingActivities.push(tracingActivity);
+    return tracingActivity;
 }
 
-export async function watchMemoActivities() {
+export async function watchTracingActivities() {
     const client = new Client("wss://s.devnet.rippletest.net:51233/");
     await client.connect();
 
     while (true) {
-        for (const memoActivity of memoActivities) {
-            for (const solutionAccountData of memoActivity.metaData.solutionAccounts) {
+        for (const tracingActivity of tracingActivities) {
+            for (const solutionAccountData of tracingActivity.metaData.solutionAccounts) {
 
-                const studentWalletData = memoActivity.wallets.find((wallet) => wallet.username === solutionAccountData.username);
+                const studentWalletData = tracingActivity.wallets.find((wallet) => wallet.username === solutionAccountData.username);
                 // console.log("student wallet data: ", studentWalletData);
                 
                 if (studentWalletData && studentWalletData.seed) {
@@ -130,9 +161,9 @@ export async function watchMemoActivities() {
                             if (found) {
                                 console.log(chalk.green(`✅ Found incoming payment to solution account for student "${solutionAccountData.username}"`));
 
-                                const studentStatus = memoActivity.status.find(s => s.username === solutionAccountData.username);
+                                const studentStatus = tracingActivity.status.find(s => s.username === solutionAccountData.username);
                                 if (!studentStatus) {
-                                    memoActivity.status.push({
+                                    tracingActivity.status.push({
                                         username: solutionAccountData.username,
                                         status: "Done",
                                         txHash: found.tx ? found.hash : undefined

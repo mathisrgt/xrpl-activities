@@ -6,20 +6,20 @@ export const students: User[] = [{
     password: "123456",
     role: "student"
 },
-{
-    username: "melanie",
-    email: "melanie@email.com",
-    password: "123456",
-    role: "student"
-}, {
-    username: "thomas",
-    email: "thomas@email.com",
-    password: "123456",
-    role: "student"
-}, {
-    username: "luc",
-    email: "luc@email.com",
-    password: "123456",
-    role: "student"
-}
+// {
+//     username: "melanie",
+//     email: "melanie@email.com",
+//     password: "123456",
+//     role: "student"
+// }, {
+//     username: "thomas",
+//     email: "thomas@email.com",
+//     password: "123456",
+//     role: "student"
+// }, {
+//     username: "luc",
+//     email: "luc@email.com",
+//     password: "123456",
+//     role: "student"
+// }
 ]
