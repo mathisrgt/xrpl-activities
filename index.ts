@@ -4,6 +4,7 @@ import { generateMemoActivity, watchMemoActivities } from './activities/memo-act
 import chalk from 'chalk';
 import { generateCollabMultisigActivity, watchCollabMultisigActivities } from './activities/collab-mutlisig-activity/collab-multisig-activity';
 import { generateTracingActivity, watchTracingActivities } from './activities/tracing-activity/tracing-activity';
+import { generateCryptoActivity, watchCryptoActivities } from './activities/crypto-activity/crypto-activity';
 
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
@@ -24,6 +25,7 @@ async function main() {
     console.log(` 1 - Memo`);
     console.log(` 2 - Collab - MultiSig`);
     console.log(` 3 - Tracing`);
+    console.log(` 4 - Cryptography (signatures)`);
     console.log(` 0 - Exit\n`);
 
     const choice = await promptUser('Enter your choice: ');
@@ -61,6 +63,17 @@ async function main() {
 
         console.log(chalk.green('\n📡 Watching for tracing activity responses...'));
         await watchTracingActivities();
+
+    } else if (choice === '4') {
+        console.log(chalk.yellow('\n🛠️  Generating crypto activity...'));
+        await generateCryptoActivity(
+            "IE Madrid - Workshop Tech.",
+            "Technical workshop for business students from IE Madrid",
+            students
+        );
+
+        console.log(chalk.green('\n📡 Watching for crypto activity responses...'));
+        await watchCryptoActivities();
     } else if (choice === '0') {
         console.log(chalk.grey('\n👋 Exiting...'));
         process.exit(0);
